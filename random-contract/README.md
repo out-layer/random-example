@@ -23,13 +23,13 @@ A simple example NEAR contract that uses OutLayer for random number generation.
 cargo near build non-reproducible-wasm
 ```
 
-WASM: `target/wasm32-unknown-unknown/release/random_contract.wasm`
+WASM: `target/near/random_contract.wasm`
 
 ## Deploy
 
 ```bash
 near contract deploy coin-toss.testnet \
-  use-file target/wasm32-unknown-unknown/release/random_contract.wasm \
+  use-file target/near/random_contract.wasm \
   with-init-call new \
   json-args '{}' \
   prepaid-gas '100.0 Tgas' \
@@ -38,6 +38,32 @@ near contract deploy coin-toss.testnet \
   sign-with-keychain \
   send
 ```
+
+`new` takes an optional `outlayer_contract_id`. With `'{}'` the network of the
+deploying account decides: `outlayer.testnet` for a `*.testnet` account,
+`outlayer.near` otherwise. To point the example somewhere else, pass
+`'{"outlayer_contract_id": "outlayer.testnet"}'`.
+
+## Upgrade
+
+An account that already runs this example holds state the current code cannot
+read, so a code-only deploy has to be followed by `migrate` in the same
+transaction. `migrate` is callable by the account itself only.
+
+```bash
+near contract deploy coin-toss.testnet \
+  use-file target/near/random_contract.wasm \
+  with-init-call migrate \
+  json-args '{}' \
+  prepaid-gas '100.0 Tgas' \
+  attached-deposit '0 NEAR' \
+  network-config testnet \
+  sign-with-keychain \
+  send
+```
+
+`migrate` takes the same optional `outlayer_contract_id` as `new`, and with
+`'{}'` picks it by network the same way.
 
 ## Usage
 
@@ -131,27 +157,33 @@ const MIN_DEPOSIT: u128 = 10_000_000_000_000_000_000_000; // 0.01 NEAR
 #[payable]
 pub fn flip_coin(&mut self, choice: CoinSide) -> Promise {
     // Hardcoded parameters
-    let args = json!({
-        "code_source": {
+    let source = json!({
+        "GitHub": {
             "repo": "https://github.com/out-layer/random-example",
             "commit": "main",
             "build_target": "wasm32-wasip1"
-        },
-        "resource_limits": {
-            "max_instructions": 10000000000,
-            "max_memory_mb": 128,
-            "max_execution_seconds": 60
-        },
-        "input_data": "{\"min\":0,\"max\":1}",
-        "response_format": "Json",
-        "payer_account_id": Some(player.clone())
+        }
     });
 
-    // Call OutLayer (outlayer.testnet for testnet, outlayer.near for mainnet)
-    ext_outlayer::ext("outlayer.testnet".parse().unwrap())
+    let resource_limits = json!({
+        "max_instructions": 10000000000u64,
+        "max_memory_mb": 128u32,
+        "max_execution_seconds": 60u64
+    });
+
+    // outlayer_contract_id is set by new(): outlayer.testnet or outlayer.near
+    ext_outlayer::ext(self.outlayer_contract_id.clone())
         .with_attached_deposit(NearToken::from_yoctonear(attached))
         .with_unused_gas_weight(1)
-        .request_execution(code_source, resource_limits, input_data, None, "Json".to_string(), Some(player.clone()))
+        .request_execution(
+            source,
+            Some(resource_limits),
+            Some("{\"min\":0,\"max\":1}".to_string()),
+            None,                  // secrets_ref
+            Some("Json".to_string()),
+            Some(player.clone()),  // payer_account_id: refund to player
+            None,                  // params
+        )
         .then(
             ext_self::ext(env::current_account_id())
                 .with_static_gas(Gas::from_gas(5_000_000_000_000))
@@ -182,8 +214,9 @@ pub fn on_random_result(
 
 ## Key Features
 
-✅ **All parameters hardcoded** (repo, commit, resource_limits, OutLayer contract ID)
+✅ **All execution parameters hardcoded** (repo, commit, resource_limits)
 ✅ **One constant**: `MIN_DEPOSIT = 0.01 NEAR`
+✅ **OutLayer contract picked by network** at init, overridable via `new()`
 ✅ **One method**: `flip_coin(choice)`
 ✅ **Cross-contract call** with yield/resume
 ✅ **Callback handling** of result

@@ -51,20 +51,23 @@ echo '{"min":1,"max":100}' | wasmtime target/wasm32-wasip1/release/random-exampl
 
 1. Push this code to a GitHub repository (e.g., https://github.com/out-layer/random-example)
 
-2. Call `request_execution` on the OffchainVM contract:
+2. Call `request_execution` on the OutLayer contract:
 ```bash
 near call outlayer.testnet request_execution '{
-  "code_source": {
-    "repo": "https://github.com/out-layer/random-example",
-    "commit": "main",
-    "build_target": "wasm32-wasip1"
+  "source": {
+    "GitHub": {
+      "repo": "https://github.com/out-layer/random-example",
+      "commit": "main",
+      "build_target": "wasm32-wasip1"
+    }
   },
   "resource_limits": {
     "max_instructions": 10000000,
     "max_memory_mb": 128,
     "max_execution_seconds": 60
   },
-  "input_data": "{\"min\":1,\"max\":100}"
+  "input_data": "{\"min\":1,\"max\":100}",
+  "response_format": "Json"
 }' --accountId your-account.testnet --deposit 0.1
 ```
 
