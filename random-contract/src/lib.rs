@@ -15,6 +15,12 @@ const MIN_DEPOSIT: u128 = 10_000_000_000_000_000_000_000; // 0.01 NEAR
 /// Fixed gas for callback
 const CALLBACK_GAS: u64 = 5_000_000_000_000; // 5 TGas
 
+/// The random-example module every flip runs: one build, pinned by its
+/// sha256, so a new commit to the repository never changes what a flip
+/// executes and no flip waits for a compile.
+const WASM_URL: &str = "https://wasmhub.testnet.fastfs.io/fastfs.testnet/0bb0668611f0fa9abeabbfaabf48436a46c94aa65ae1a0d106db7212f2d5f88a.wasm";
+const WASM_HASH: &str = "0bb0668611f0fa9abeabbfaabf48436a46c94aa65ae1a0d106db7212f2d5f88a";
+
 /// External contract interface for OutLayer
 #[ext_contract(ext_outlayer)]
 #[allow(dead_code)]
@@ -133,9 +139,9 @@ impl CoinFlipContract {
 
         // Hardcoded parameters
         let source = near_sdk::serde_json::json!({
-            "GitHub": {
-                "repo": "https://github.com/out-layer/random-example",
-                "commit": "main",
+            "WasmUrl": {
+                "url": WASM_URL,
+                "hash": WASM_HASH,
                 "build_target": "wasm32-wasip1"
             }
         });

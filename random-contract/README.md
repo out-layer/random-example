@@ -6,7 +6,7 @@ A simple example NEAR contract that uses OutLayer for random number generation.
 
 1. User calls `flip_coin(Heads or Tails)` + attaches 0.01 NEAR
 2. Contract calls OutLayer `request_execution` to generate a random number (0 or 1)
-3. Worker compiles and executes WASM from https://github.com/out-layer/random-example
+3. Worker executes a fixed build of https://github.com/out-layer/random-example, fetched from FastFS and checked against its sha256
 4. Contract receives result via callback: `{"random_number": 0}` or `{"random_number": 1}`
 5. Compares user's choice with result and returns message
 
@@ -133,7 +133,7 @@ OutLayer Contract (outlayer.testnet or outlayer.near)
   └─ Emit event
      ↓
 Worker
-  ├─ Compilation: github.com/out-layer/random-example (hardcoded)
+  ├─ WASM: the pinned random-example build from FastFS (hardcoded URL + sha256)
   ├─ Execution: {"min":0, "max":1} (hardcoded)
   └─ Result: {"random_number": 0 or 1}
      ↓
@@ -158,9 +158,9 @@ const MIN_DEPOSIT: u128 = 10_000_000_000_000_000_000_000; // 0.01 NEAR
 pub fn flip_coin(&mut self, choice: CoinSide) -> Promise {
     // Hardcoded parameters
     let source = json!({
-        "GitHub": {
-            "repo": "https://github.com/out-layer/random-example",
-            "commit": "main",
+        "WasmUrl": {
+            "url": WASM_URL,   // the pinned random-example build on FastFS
+            "hash": WASM_HASH, // its sha256
             "build_target": "wasm32-wasip1"
         }
     });
@@ -214,7 +214,7 @@ pub fn on_random_result(
 
 ## Key Features
 
-✅ **All execution parameters hardcoded** (repo, commit, resource_limits)
+✅ **All execution parameters hardcoded** (WASM URL and sha256, resource_limits)
 ✅ **One constant**: `MIN_DEPOSIT = 0.01 NEAR`
 ✅ **OutLayer contract picked by network** at init, overridable via `new()`
 ✅ **One method**: `flip_coin(choice)`
