@@ -49,15 +49,21 @@ echo '{"min":1,"max":100}' | wasmtime target/wasm32-wasip1/release/random-exampl
 
 ## Usage with NEAR OutLayer
 
-1. Push this code to a GitHub repository (e.g., https://github.com/out-layer/random-example)
+1. Publish the build and deploy it as a project:
+```bash
+outlayer upload target/wasm32-wasip1/release/random-example.wasm
+# prints SHA256 and: FastFS URL: https://test.fastfs.io/<you>/outlayer.testnet/<sha256>.wasm
+outlayer deploy random-example <FastFS URL>
+```
 
-2. Call `request_execution` on the OutLayer contract:
+2. Call `request_execution` on the OutLayer contract. A direct run names the published file and its
+sha256 — here the pinned testnet build that `random-contract/` uses:
 ```bash
 near call outlayer.testnet request_execution '{
   "source": {
-    "GitHub": {
-      "repo": "https://github.com/out-layer/random-example",
-      "commit": "main",
+    "WasmUrl": {
+      "url": "https://wasmhub.testnet.fastfs.io/fastfs.testnet/0bb0668611f0fa9abeabbfaabf48436a46c94aa65ae1a0d106db7212f2d5f88a.wasm",
+      "hash": "0bb0668611f0fa9abeabbfaabf48436a46c94aa65ae1a0d106db7212f2d5f88a",
       "build_target": "wasm32-wasip1"
     }
   },
@@ -70,12 +76,15 @@ near call outlayer.testnet request_execution '{
   "response_format": "Json"
 }' --accountId your-account.testnet --deposit 0.1
 ```
+   Your own project runs with `"source": {"Project": {"project_id": "your-account.testnet/random-example", "version_key": null}}`.
 
 3. Worker will:
-   - Compile the WASM in sandboxed Docker container
+   - Fetch the WASM and check it against the sha256
    - Execute with wasmi (WASI P1) or wasmtime (WASI P2)
    - Return the random number as readable text (not bytes!)
    - Show result in NEAR explorer
+
+Source: https://github.com/out-layer/random-example
 
 ## Unit Tests
 
